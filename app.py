@@ -28,6 +28,9 @@ def get_info():
         return jsonify({"error": "No URL provided"}), 400
     try:
         ydl_opts = {"quiet": True, "no_warnings": True, "skip_download": True}
+        cookie_path = os.path.join(os.path.dirname(__file__), "cookies.txt")
+        if os.path.exists(cookie_path):
+            ydl_opts["cookiefile"] = cookie_path
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
         return jsonify({
@@ -94,6 +97,10 @@ def download():
                     "quiet": True,
                     "ffmpeg_location": os.path.dirname(__file__),
                 }
+
+            cookie_path = os.path.join(os.path.dirname(__file__), "cookies.txt")
+            if os.path.exists(cookie_path):
+                ydl_opts["cookiefile"] = cookie_path
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
