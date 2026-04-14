@@ -31,8 +31,9 @@ def get_info():
             "quiet": True,
             "no_warnings": True,
             "skip_download": True,
-            "extractor_args": {"youtube": {"player_client": ["web", "ios"]}},
-            "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1"
+            "extractor_args": {"youtube": {"player_client": ["android", "web", "ios", "mweb"]}},
+            "user_agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Mobile Safari/537.36",
+            "nocheckcertificate": True,
         }
         cookie_path = os.path.join(os.path.dirname(__file__), "cookies.txt")
         if os.path.exists(cookie_path):
@@ -90,8 +91,9 @@ def download():
                     }],
                     "progress_hooks": [progress_hook],
                     "quiet": True,
-                    "extractor_args": {"youtube": {"player_client": ["web", "ios"]}},
-                    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1"
+                    "extractor_args": {"youtube": {"player_client": ["android", "web", "ios", "mweb"]}},
+                    "user_agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Mobile Safari/537.36",
+                    "nocheckcertificate": True,
                 }
             else:
                 height_map = {"4k": 2160, "1080": 1080, "720": 720, "480": 480, "360": 360}
@@ -102,8 +104,9 @@ def download():
                     "merge_output_format": fmt,
                     "progress_hooks": [progress_hook],
                     "quiet": True,
-                    "extractor_args": {"youtube": {"player_client": ["web", "ios"]}},
-                    "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1"
+                    "extractor_args": {"youtube": {"player_client": ["android", "web", "ios", "mweb"]}},
+                    "user_agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Mobile Safari/537.36",
+                    "nocheckcertificate": True,
                 }
 
             cookie_path = os.path.join(os.path.dirname(__file__), "cookies.txt")

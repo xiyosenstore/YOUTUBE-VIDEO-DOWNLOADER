@@ -347,7 +347,15 @@ async function startDownload() {
       clearInterval(polling);
       document.getElementById('dlBtn').disabled = false;
       const eb = document.getElementById('errorBox');
-      eb.textContent = 'Error: ' + (p.error || 'Unknown error');
+      let msg = p.error || 'Unknown error';
+      if (msg.includes("confirm you're not a bot") || msg.includes("Sign in to confirm")) {
+        msg = `<strong>YouTube blocked this request.</strong><br><br>
+               Cloud servers like Render are often flagged by YouTube. To fix this:<br>
+               1. Export <code>cookies.txt</code> from your browser (using an extension).<br>
+               2. Upload it to your project folder on GitHub.<br>
+               3. The app will automatically use it after redeploying.`;
+      }
+      eb.innerHTML = 'Error: ' + msg;
       eb.classList.add('show');
     }
   }, 700);
