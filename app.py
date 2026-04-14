@@ -19,10 +19,20 @@ HTML = open(os.path.join(os.path.dirname(__file__), "index.html")).read()
 
 @app.route("/")
 def index():
-    # Quick check for ffmpeg on start (for logs)
-    if not shutil.which("ffmpeg"):
-        print("\n[WARNING] FFmpeg not found! High-quality downloads (1080p+) will fail.\n")
+    # Detect local FFmpeg
+    local_ffmpeg = os.path.exists(os.path.join(os.path.dirname(__file__), "ffmpeg.exe"))
+    if not local_ffmpeg and not shutil.which("ffmpeg"):
+        print("\n[WARNING] FFmpeg not found! 1080p, 4K, and MP3 conversion will fail.")
+        print("Please place ffmpeg.exe and ffprobe.exe in: " + os.path.dirname(__file__) + "\n")
     return render_template_string(HTML)
+
+
+def get_ffmpeg_path():
+    """Returns the path to the directory containing ffmpeg if binaries exist locally."""
+    local_dir = os.path.dirname(__file__)
+    if os.path.exists(os.path.join(local_dir, "ffmpeg.exe")):
+        return local_dir
+    return None
 
 
 @app.route("/info", methods=["POST"])
@@ -81,7 +91,10 @@ def download():
                     raise Exception("FFmpeg not found on this system. 1080p/4K and MP3 conversion require FFmpeg installed and in your PATH.")
 
             is_audio = fmt in ("mp3", "m4a")
-            out_template = os.path.join(DOWNLOAD_DIR, f"{job_id}-----%(title)s.%(ext)s")
+            # We use the video ID to ensure the file is unique on disk
+            out_template = os.path.join(DOWNLOAD_DIR, "%(id)s-----%(title)s.%(ext)s")
+
+            ffmpeg_path = get_ffmpeg_path()
 
             def progress_hook(d):
                 if d["status"] == "downloading":
@@ -109,7 +122,9 @@ def download():
                     "extractor_args": {"youtube": {"player_client": ["android", "web", "ios", "mweb"]}},
                     "user_agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Mobile Safari/537.36",
                     "nocheckcertificate": True,
+                    "ffmpeg_location": ffmpeg_path if ffmpeg_path else None
                 }
+
             else:
                 height_map = {"4k": 2160, "1080": 1080, "720": 720, "480": 480, "360": 360}
                 h = height_map.get(quality.lower(), 1080)
@@ -122,6 +137,7 @@ def download():
                     "extractor_args": {"youtube": {"player_client": ["android", "web", "ios", "mweb"]}},
                     "user_agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Mobile Safari/537.36",
                     "nocheckcertificate": True,
+                    "ffmpeg_location": ffmpeg_path if ffmpeg_path else None
                 }
             
             proxy = os.environ.get("PROXY_URL")
@@ -132,14 +148,13 @@ def download():
             if os.path.exists(cookie_path):
                 ydl_opts["cookiefile"] = cookie_path
 
+            # Download
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.download([url])
-
-            # Find the output file
-            for f in os.listdir(DOWNLOAD_DIR):
-                if f.startswith(job_id):
-                    progress_store[job_id]["filename"] = f
-                    break
+                result = ydl.extract_info(url, download=True)
+                downloaded_file = ydl.prepare_filename(result)
+                # Map the job_id to the actual filename on disk
+                progress_store[job_id]["filename"] = os.path.basename(downloaded_file)
+            
             progress_store[job_id]["status"] = "done"
         except Exception as e:
             progress_store[job_id]["status"] = "error"
