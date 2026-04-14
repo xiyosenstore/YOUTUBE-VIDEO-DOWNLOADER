@@ -27,11 +27,6 @@ Then open your browser at: **http://localhost:5000**
 -   **Bot Bypass**: Integrated mobile user-agents and client spoofing.
 -   **Proxy Support**: Support for `PROXY_URL` environment variables.
 
-## Bot Detection (Important)
-If you get a "Sign in to confirm you're not a bot" error:
-1.  Export your `cookies.txt` from YouTube (using a browser extension).
-2.  Place it in the project root.
-3.  The app will automatically detect and use it.
 
 ---
-*Note: This app is for legal personal use only.*
+*Note: This app is for  personal use only.*
