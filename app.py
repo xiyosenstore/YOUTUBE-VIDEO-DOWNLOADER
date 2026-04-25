@@ -155,4 +155,5 @@ def serve_file(job_id):
     return send_file(file_path, as_attachment=True, download_name=display_name)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    # Hugging Face wajib pake port 7860 biar bisa dibuka
+    app.run(host="0.0.0.0", port=7860, debug=False)
