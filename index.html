@@ -93,7 +93,6 @@
   .video-info { display: none; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
   .video-info.show { display: flex; gap: 12px; align-items: flex-start; }
   .v-thumb { width: 100px; height: 60px; border-radius: var(--radius-sm); object-fit: cover; background: var(--surface2); flex-shrink: 0; border: 1px solid var(--border); }
-  .v-thumb-placeholder { display: flex; align-items: center; justify-content: center; color: #444; font-size: 11px; }
   .v-meta { flex: 1; min-width: 0; }
   .v-title { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
   .v-details { font-size: 12px; color: var(--muted); }
@@ -170,9 +169,27 @@
   .error-box { display: none; margin-top: 12px; padding: 10px 14px; background: rgba(255,62,62,0.1); border: 1px solid rgba(255,62,62,0.25); border-radius: var(--radius-sm); font-size: 13px; color: var(--accent2); }
   .error-box.show { display: block; }
 
+  /* Telegram Floating Button */
+  .tg-float {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #0088cc;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    transition: transform 0.2s ease;
+    z-index: 1000;
+  }
+  .tg-float:hover { transform: scale(1.1); }
+  .tg-float svg { width: 28px; height: 28px; fill: white; }
+
   /* Footer note */
   .note { font-size: 12px; color: #555; text-align: center; margin-top: 1.5rem; line-height: 1.7; }
-  .note code { background: var(--surface); border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; font-size: 11px; color: #aaa; }
 </style>
 </head>
 <body>
@@ -190,7 +207,6 @@
     <p>Download YouTube videos in any quality - video or audio</p>
   </div>
 
-  <!-- URL -->
   <div class="card">
     <div class="card-label">YouTube URL</div>
     <div class="url-row">
@@ -206,7 +222,6 @@
     </div>
   </div>
 
-  <!-- Format + Quality -->
   <div class="card">
     <div class="card-label">Format</div>
     <div class="tabs" id="tabs">
@@ -219,7 +234,6 @@
     <div class="quality-grid" id="qualityGrid"></div>
   </div>
 
-  <!-- Download -->
   <div class="card">
     <button class="btn-dl" id="dlBtn" onclick="startDownload()">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2v10M5 8l4 4 4-4M2 15h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -235,9 +249,11 @@
     </div>
     <div class="error-box" id="errorBox"></div>
   </div>
-
-
 </div>
+
+<a href="https://t.me/Bleszh" target="_blank" class="tg-float" title="Contact Developer">
+  <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.11.02-1.93 1.23-5.46 3.62-.51.35-.98.52-1.4.51-.46-.01-1.35-.26-2.01-.48-.81-.27-1.45-.42-1.39-.88.03-.24.36-.48.99-.73 3.84-1.67 6.41-2.77 7.7-3.3 3.66-1.51 4.42-1.77 4.92-1.78.11 0 .35.03.5.16.13.11.17.25.18.36 0 .07-.01.23-.02.32z"/></svg>
+</a>
 
 <script>
 const qualities = {
@@ -265,7 +281,7 @@ const qualities = {
   ],
 };
 
-let fmt = 'mp4', sel = 0, polling = null;
+let currentFmt = 'mp4', sel = 0, polling = null;
 
 function renderQualities(f) {
   const g = document.getElementById('qualityGrid');
@@ -280,7 +296,7 @@ function renderQualities(f) {
 }
 
 function setFormat(f, btn) {
-  fmt = f; sel = 0;
+  currentFmt = f; sel = 0;
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
   renderQualities(f);
@@ -309,9 +325,13 @@ async function fetchInfo() {
 async function startDownload() {
   const url = document.getElementById('urlInput').value.trim();
   if (!url) return alert('Please enter a YouTube URL.');
-  const quality = qualities[fmt][sel].quality;
+  
+  // AMBIL NILAI TERBARU DARI VARIABEL GLOBAL SAAT TOMBOL DIKLIK
+  const quality = qualities[currentFmt][sel].quality;
+  const formatToSend = currentFmt;
 
   // Reset UI
+  if(polling) clearInterval(polling);
   document.getElementById('dlBtn').disabled = true;
   document.getElementById('progressWrap').classList.add('show');
   document.getElementById('resultBox').classList.remove('show');
@@ -321,44 +341,45 @@ async function startDownload() {
   document.getElementById('statusText').textContent = 'Starting…';
   document.getElementById('pctText').textContent = '0%';
 
-  const r = await fetch('/download', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({url, format: fmt, quality}) });
-  const { job_id } = await r.json();
+  try {
+    const r = await fetch('/download', { 
+        method:'POST', 
+        headers:{'Content-Type':'application/json'}, 
+        body: JSON.stringify({url, format: formatToSend, quality}) 
+    });
+    const { job_id } = await r.json();
 
-  polling = setInterval(async () => {
-    const pr = await fetch(`/progress/${job_id}`);
-    const p = await pr.json();
-    const pct = Math.round(p.percent || 0);
-    document.getElementById('progressFill').style.width = pct + '%';
-    document.getElementById('pctText').textContent = pct + '%';
+    polling = setInterval(async () => {
+      const pr = await fetch(`/progress/${job_id}`);
+      const p = await pr.json();
+      const pct = Math.round(p.percent || 0);
+      document.getElementById('progressFill').style.width = pct + '%';
+      document.getElementById('pctText').textContent = pct + '%';
 
-    if (p.status === 'downloading') document.getElementById('statusText').textContent = 'Downloading…';
-    else if (p.status === 'processing') document.getElementById('statusText').textContent = 'Processing…';
-    else if (p.status === 'done') {
-      clearInterval(polling);
-      document.getElementById('progressFill').classList.add('done');
-      document.getElementById('progressFill').style.width = '100%';
-      document.getElementById('pctText').textContent = '100%';
-      document.getElementById('statusText').textContent = 'Done!';
-      document.getElementById('dlBtn').disabled = false;
-      const box = document.getElementById('resultBox');
-      document.getElementById('saveLink').href = `/file/${job_id}`;
-      box.classList.add('show');
-    } else if (p.status === 'error') {
-      clearInterval(polling);
-      document.getElementById('dlBtn').disabled = false;
-      const eb = document.getElementById('errorBox');
-      let msg = p.error || 'Unknown error';
-      if (msg.includes("confirm you're not a bot") || msg.includes("Sign in to confirm")) {
-        msg = `<strong>YouTube blocked this request.</strong><br><br>
-               Cloud servers like Render are often flagged by YouTube. To fix this:<br>
-               1. Export <code>cookies.txt</code> from your browser (using an extension).<br>
-               2. Upload it to your project folder on GitHub.<br>
-               3. The app will automatically use it after redeploying.`;
+      if (p.status === 'downloading') document.getElementById('statusText').textContent = 'Downloading…';
+      else if (p.status === 'processing') document.getElementById('statusText').textContent = 'Processing…';
+      else if (p.status === 'done') {
+        clearInterval(polling);
+        document.getElementById('progressFill').classList.add('done');
+        document.getElementById('progressFill').style.width = '100%';
+        document.getElementById('pctText').textContent = '100%';
+        document.getElementById('statusText').textContent = 'Done!';
+        document.getElementById('dlBtn').disabled = false;
+        const box = document.getElementById('resultBox');
+        document.getElementById('saveLink').href = `/file/${job_id}`;
+        box.classList.add('show');
+      } else if (p.status === 'error') {
+        clearInterval(polling);
+        document.getElementById('dlBtn').disabled = false;
+        const eb = document.getElementById('errorBox');
+        eb.innerHTML = 'Error: ' + (p.error || 'Unknown error');
+        eb.classList.add('show');
       }
-      eb.innerHTML = 'Error: ' + msg;
-      eb.classList.add('show');
-    }
-  }, 700);
+    }, 1000);
+  } catch (e) {
+    document.getElementById('dlBtn').disabled = false;
+    alert("Request failed: " + e.message);
+  }
 }
 
 renderQualities('mp4');
